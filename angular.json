@@ -81,6 +81,12 @@
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
+            "fileReplacements": [
+              {
+                "replace": "src/environtments/environtment.prod.ts",
+                "with": "src/environtments/environtment.test.ts"
+              }
+            ],
             "polyfills": [
               "zone.js",
               "zone.js/testing"
