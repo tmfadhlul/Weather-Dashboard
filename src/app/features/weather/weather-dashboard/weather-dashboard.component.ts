@@ -2,6 +2,7 @@ import { Component, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl, Validators } from '@angular/forms';
 import { WeatherService } from '../../../core/services/weather.service';
+import { StorageService } from '../../../core/services/storage.service';
 import { WeatherData, GeocodingResult } from '../../../core/models/weather.model';
 import { BehaviorSubject, Subject, interval, from, EMPTY } from 'rxjs';
 import { takeUntil, switchMap, catchError, concatMap, debounceTime, distinctUntilChanged } from 'rxjs/operators';
@@ -15,6 +16,7 @@ import { takeUntil, switchMap, catchError, concatMap, debounceTime, distinctUnti
 })
 export class WeatherDashboardComponent implements OnDestroy {
   private weatherService = inject(WeatherService);
+  private storageService = inject(StorageService);
   private destroy$ = new Subject<void>();
   private citiesSubject = new BehaviorSubject<WeatherData[]>([]);
   private errorSubject = new BehaviorSubject<string | null>(null);
@@ -23,7 +25,7 @@ export class WeatherDashboardComponent implements OnDestroy {
   searchResults$ = this.searchResults.asObservable();
   showSuggestions = false;
 
-  cities$ = this.citiesSubject.asObservable();
+  cities$ = this.storageService.cities$;
   error$ = this.errorSubject.asObservable();
   loading$ = this.weatherService.loading$;
 
@@ -43,10 +45,14 @@ export class WeatherDashboardComponent implements OnDestroy {
     interval(7200000).pipe(
       takeUntil(this.destroy$),
       switchMap(() => {
-        const cities = this.citiesSubject.value;
-        if (cities.length === 0) return EMPTY;
+        let currentCities: WeatherData[] = [];
+        this.storageService.cities$.pipe(takeUntil(this.destroy$)).subscribe(cities => {
+          currentCities = cities;
+        });
 
-        return from(cities).pipe(
+        if (currentCities.length === 0) return EMPTY;
+
+        return from(currentCities).pipe(
           concatMap(city => this.weatherService.getCurrentWeather(city.name)),
           catchError(error => {
             this.errorSubject.next('Failed to update weather data');
@@ -56,11 +62,8 @@ export class WeatherDashboardComponent implements OnDestroy {
       })
     ).subscribe(updatedCity => {
       if (updatedCity) {
-        const currentCities = this.citiesSubject.value;
-        const updatedCities = currentCities.map(city => 
-          city.name === updatedCity.name ? updatedCity : city
-        );
-        this.citiesSubject.next(updatedCities);
+        this.storageService.removeCity(updatedCity.id);
+        this.storageService.addCity(updatedCity);
       }
     });
   }
@@ -87,7 +90,10 @@ export class WeatherDashboardComponent implements OnDestroy {
   addCity(): void {
     if (this.cityControl.valid && this.cityControl.value) {
       const cityName = this.cityControl.value.trim();
-      const currentCities = this.citiesSubject.value;
+      let currentCities: WeatherData[] = [];
+      this.storageService.cities$.pipe(takeUntil(this.destroy$)).subscribe(cities => {
+        currentCities = cities;
+      });
 
       const cityExists = currentCities.some(city =>
         city.name.toLowerCase() === cityName.toLowerCase()
@@ -101,7 +107,7 @@ export class WeatherDashboardComponent implements OnDestroy {
             return EMPTY;
           })
         ).subscribe(weatherData => {
-          this.citiesSubject.next([...currentCities, weatherData]);
+          this.storageService.addCity(weatherData);
           this.cityControl.reset();
           this.errorSubject.next(null);
           this.showSuggestions = false;
@@ -113,10 +119,11 @@ export class WeatherDashboardComponent implements OnDestroy {
   }
 
   removeCity(index: number): void {
-    const currentCities = this.citiesSubject.value;
-    this.citiesSubject.next(
-      currentCities.filter((_, i) => i !== index)
-    );
+    this.storageService.cities$.pipe(takeUntil(this.destroy$)).subscribe(cities => {
+      if (cities[index]) {
+        this.storageService.removeCity(cities[index].id);
+      }
+    });
   }
 
   selectCity(result: GeocodingResult): void {
