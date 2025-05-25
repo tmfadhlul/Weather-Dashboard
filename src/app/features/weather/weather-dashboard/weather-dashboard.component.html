@@ -1,0 +1,94 @@
+<div class="weather-dashboard">
+  <header class="dashboard-header">
+    <h1 class="dashboard-title">
+      <span class="weather-icon">🌤️</span>
+      Weather Dashboard
+    </h1>
+    <p class="dashboard-subtitle">Track weather conditions across multiple cities</p>
+  </header>
+
+  <section class="add-city-section">
+    <div class="input-group">
+      <div class="search-container">
+        <input
+          [formControl]="cityControl"
+          placeholder="Enter city name..."
+          class="city-input"
+          [class.error]="cityControl.invalid && cityControl.touched"
+          (focus)="onInputFocus()"
+          (blur)="onInputBlur()"
+          (keydown.enter)="addCity()"
+        >
+        <div *ngIf="showSuggestions && (searchResults$ | async)?.length" class="suggestions-dropdown">
+          <div 
+            *ngFor="let result of searchResults$ | async"
+            class="suggestion-item"
+            (mousedown)="selectCity(result)"
+          >
+            <span class="city-name">{{result.name}}</span>
+            <span class="country-code">{{result.state ? result.state + ', ' : ''}}{{result.country}}</span>
+          </div>
+        </div>
+      </div>
+      <button
+        (click)="addCity()"
+        [disabled]="!hasValidInput || (loading$ | async)"
+        class="add-button"
+        [class.loading]="loading$ | async"
+      >
+        <span *ngIf="!(loading$ | async)">Add City</span>
+        <span *ngIf="loading$ | async" class="loading-text">
+          <span class="spinner"></span>
+          Loading...
+        </span>
+      </button>
+    </div>
+
+    <div *ngIf="cityControl.invalid && cityControl.touched" class="validation-errors">
+      <small *ngIf="cityControl.errors?.['required']">City name is required</small>
+      <small *ngIf="cityControl.errors?.['minlength']">City name must be at least 2 characters</small>
+      <small *ngIf="cityControl.errors?.['pattern']">Please enter a valid city name</small>
+    </div>
+
+    <div *ngIf="error$ | async as error" class="error-message">
+      <span>{{ error }}</span>
+      <button (click)="clearError()" class="error-close">✕</button>
+    </div>
+  </section>
+
+  <section class="cities-grid">
+    <div *ngFor="let city of cities$ | async; let i = index" class="city-card">
+      <div class="card-header">
+        <h3>{{ city.name }}, {{ city.country }}</h3>
+        <button (click)="removeCity(i)" class="remove-btn" title="Remove city">✕</button>
+      </div>
+      <div class="weather-info">
+        <div class="weather-main">
+          <img 
+            [src]="'https://openweathermap.org/img/wn/' + city.icon + '@2x.png'"
+            [alt]="city.description"
+            class="weather-icon-img"
+          >
+          <div class="temperature-info">
+            <div class="temperature">{{ city.temperature }}°C</div>
+            <div class="feels-like">Feels like {{ city.feelsLike }}°C</div>
+          </div>
+        </div>
+        <div class="description">{{ city.description | titlecase }}</div>
+        <div class="details">
+          <span class="detail">💧 {{ city.humidity }}%</span>
+          <span class="detail">💨 {{ city.windSpeed }} m/s</span>
+        </div>
+        <div class="timestamp">
+          Updated {{ city.timestamp | date:'short' }}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div *ngIf="(cities$ | async)?.length === 0" class="empty-state">
+    <div class="empty-icon">🏙️</div>
+    <h3>No Cities Added Yet</h3>
+    <p>Start by adding your first city to track its weather conditions</p>
+  </div>
+</div>

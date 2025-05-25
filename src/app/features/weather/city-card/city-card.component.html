@@ -1,0 +1,37 @@
+<div class="city-card">
+  <div class="card-header">
+    <div class="city-info">
+      <h3 class="city-name">{{ weatherData.name }}</h3>
+      <span class="country">{{ weatherData.country }}</span>
+    </div>
+    <div class="card-actions">
+      <button (click)="onRefresh()" class="action-button refresh-button" title="Refresh">🔄</button>
+      <button (click)="onRemove()" class="action-button remove-button" title="Remove">✕</button>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <div class="weather-main">
+      <img [src]="getWeatherIconUrl()" [alt]="weatherData.description" class="weather-icon">
+      <div class="temperature-info">
+        <span class="temperature">{{ weatherData.temperature }}°C</span>
+        <span class="feels-like">Feels like {{ weatherData.feelsLike }}°C</span>
+      </div>
+    </div>
+
+    <div class="weather-description">
+      {{ formatDescription(weatherData.description) }}
+    </div>
+
+    <div class="weather-details">
+      <div class="detail-item">
+        <span class="detail-label">Humidity</span>
+        <span class="detail-value">{{ weatherData.humidity }}%</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">Wind Speed</span>
+        <span class="detail-value">{{ weatherData.windSpeed }} m/s</span>
+      </div>
+    </div>
+  </div>
+</div>
